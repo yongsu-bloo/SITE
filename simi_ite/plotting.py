@@ -50,6 +50,7 @@ def plot_format():
 def fill_bounds(data, axis=0, std_error=False):
     if std_error:
         dev = np.std(data, axis)/np.sqrt(data.shape[axis])
+
     else:
         dev = np.std(data, axis)
 
@@ -322,7 +323,7 @@ def plot_evaluation_bin(results, configs, output_dir, data_train_path, data_test
 
         '''plotting policy curve'''
         '''
-        
+
         '''
 
         # for i in range(topk):

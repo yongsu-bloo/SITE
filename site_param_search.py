@@ -53,6 +53,8 @@ def run(cfg_file, num_runs):
     configs = load_config(cfg_file)
 
     outdir = configs['outdir'][0]
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
     used_cfg_file = '%s/used_configs.txt' % outdir
 
 
@@ -91,6 +93,11 @@ def run(cfg_file, num_runs):
 
         flags = ' '.join('--%s %s' % (k,str(v)) for k,v in cfg.iteritems())
         call('python site_net_train.py %s' % flags, shell=True)
+
+        # Todo: insert overwrite and evaluate_period to flags
+        # if 'evaluate_period' in configs and 'overwrite' in configs:
+        #     if i % int(configs['evaluate_period'][0]) == 0:
+        #         call('python evaluate.py %s %s' % (cfg_file, configs['overwrite']), shell=True)
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:

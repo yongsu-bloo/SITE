@@ -226,7 +226,6 @@ def train(SITE, sess, train_step, D, I_valid, D_test, logfile, i_exp):
             y_pred_cf = sess.run(SITE.output, feed_dict={SITE.x: D['x'], \
                 SITE.t: 1-D['t'], SITE.do_in: 1.0, SITE.do_out: 1.0})
             preds_train.append(np.concatenate((y_pred_f, y_pred_cf),axis=1))
-
             if D_test is not None:
                 y_pred_f_test = sess.run(SITE.output, feed_dict={SITE.x: D_test['x'], \
                     SITE.t: D_test['t'], SITE.do_in: 1.0, SITE.do_out: 1.0})
@@ -243,7 +242,6 @@ def train(SITE, sess, train_step, D, I_valid, D_test, logfile, i_exp):
                     reps_test_i = sess.run([SITE.h_rep], feed_dict={SITE.x: D_test['x'], \
                         SITE.do_in: 1.0, SITE.do_out: 0.0})
                     reps_test.append(reps_test_i)
-
     return losses, preds_train, preds_test, reps, reps_test
 
 def run(outdir):

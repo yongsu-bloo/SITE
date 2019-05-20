@@ -127,7 +127,7 @@ def load_data(datapath):
         HAVE_TRUTH = True
     except:
         print 'Couldn\'t find ground truth. Proceeding...'
-        ycfs = None; mu0s = None; mu1s = None
+        ycfs = None if 'ycf' not in arr else arr['ycf']; mu0s = None; mu1s = None
 
     # data = {'x':xs, 't':ts, 'e':es, 'yf':yfs, 'ycf':ycfs, \
     #         'mu0':mu0s, 'mu1':mu1s, 'ate':ate, 'YMUL': ymul, \

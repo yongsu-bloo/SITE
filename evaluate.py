@@ -40,7 +40,8 @@ def evaluate(config_file, overwrite=False, filters=None):
     cfg = load_config(config_file)
 
     output_dir = cfg['outdir']
-
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
     if not os.path.isdir(output_dir):
         raise Exception('Could not find output at path: %s' % output_dir)
 
@@ -70,13 +71,12 @@ def evaluate(config_file, overwrite=False, filters=None):
 
 
 
-    if binary:
+    if binary: # jobs
         if data_train_find['HAVE_TRUTH']:
             plot_evaluation_cont(eval_results, configs, output_dir, data_train, data_test, filters)
         else:
-
             plot_evaluation_bin(eval_results, configs, output_dir, data_train, data_test, filters)
-    else:
+    else: # ihdp, twins
         plot_evaluation_cont(eval_results, configs, output_dir, data_train, data_test, filters)
 
 
