@@ -1,5 +1,5 @@
 import numpy as np
-import os, time
+import os, time, random
 from sklearn import metrics
 from sklearn.metrics import roc_auc_score
 
@@ -93,7 +93,7 @@ def pehe_nn(yf_p, ycf_p, y, x, t, nn_t=None, nn_c=None):
     return pehe_nn
 
 def evaluate_bin_att(predictions, data, i_exp, I_subset=None,
-                     compute_policy_curve=False, nn_t=None, nn_c=None):
+                     compute_policy_curve=False, nn_t=None, nn_c=None, cfg=None):
     # try:
         # print data.keys()
         x = data['x'][:, :, i_exp]
@@ -148,87 +148,10 @@ def evaluate_bin_att(predictions, data, i_exp, I_subset=None,
                 'err_fact': err_fact, 'lpr': lpr,
                 'policy_value': policy_value, 'policy_risk': 1 - policy_value,
                 'policy_curve': policy_curve, 'pehe_nn': pehe_appr}
-    # except:
-    #     x = data['x'][:, :, i_exp]
-    #     t = data['t'][:, i_exp]
-    #     yf = data['yf'][:, i_exp]
-    #     ycf = data['ycf'][:, i_exp]
-    #     try:
-    #         mu0 = data['mu0'][range(x.shape[0]), i_exp]
-    #         mu1 = data['mu1'][range(x.shape[0]), i_exp]
-    #     except:
-    #         mu0 = data['yf'][:, i_exp] * (1 - t) + data['ycf'][:, i_exp] * t
-    #         mu1 = data['ycf'][:, i_exp] * (1 - t) + data['yf'][:, i_exp] * t
-    #
-    #     yf_p = predictions[:, 0]
-    #     ycf_p = predictions[:, 1]
-    #
-    #
-    #
-    #     if not I_subset is None:
-    #         x = x[I_subset,]
-    #         t = t[I_subset]
-    #         yf_p = yf_p[I_subset]
-    #         ycf_p = ycf_p[I_subset]
-    #         yf = yf[I_subset]
-    #         ycf = ycf[I_subset]
-    #         mu0 = mu0[I_subset]
-    #         mu1 = mu1[I_subset]
-    #
-    #     eff = mu1 - mu0
-    #
-    #     rmse_fact = np.sqrt(np.mean(np.square(yf_p - yf)))
-    #     rmse_cfact = np.sqrt(np.mean(np.square(ycf_p - ycf)))
-    #
-    #     eff_pred = ycf_p - yf_p;
-    #     eff_pred[t > 0] = -eff_pred[t > 0];
-    #
-    #     ite_pred = ycf_p - yf
-    #     ite_pred[t > 0] = -ite_pred[t > 0]
-    #     rmse_ite = np.sqrt(np.mean(np.square(ite_pred - eff)))
-    #
-    #     ate_pred = np.mean(eff_pred)
-    #     bias_ate = ate_pred - np.mean(eff)
-    #
-    #     att_pred = np.mean(eff_pred[t > 0])
-    #     bias_att = att_pred - np.mean(eff[t > 0])
-    #
-    #     atc_pred = np.mean(eff_pred[t < 1])
-    #     bias_atc = atc_pred - np.mean(eff[t < 1])
-    #
-    #     pehe = np.sqrt(np.mean(np.square(eff_pred - eff)))
-    #
-    #     pehe_appr = np.nan
-    #
-    #     y_0_p = yf_p * (1 - t) + ycf_p * t
-    #     y_1_p = yf_p * t + ycf_p* (1-t)
-    #
-    #     y_label = np.concatenate((mu0, mu1), axis=0)
-    #     y_label_pred = np.concatenate((y_0_p, y_1_p), axis=0)
-    #
-    #     fpr, tpr, thresholds = metrics.roc_curve(y_label, y_label_pred)
-    #     auc = metrics.auc(fpr, tpr)
-    #     roc_auc = roc_auc_score(y_label, y_label_pred)
-    #
-    #     fact_fpr, fact_tpr, fact_thresholds = metrics.roc_curve(yf, yf_p)
-    #     fact_auc = metrics.auc(fpr, tpr)
-    #     fact_roc_auc = roc_auc_score(yf, yf_p)
-    #
-    #     # @TODO: Not clear what this is for continuous data
-    #     # policy_value, policy_curve = policy_val(t, yf, eff_pred, compute_policy_curve)
-    #
-    #     return {'ate_pred': ate_pred, 'att_pred': att_pred,
-    #             'atc_pred': atc_pred, 'bias_ate': bias_ate,
-    #             'bias_att': bias_att, 'bias_atc': bias_atc,
-    #             'rmse_fact': rmse_fact, 'rmse_cfact': rmse_cfact,
-    #             'pehe': pehe, 'rmse_ite': rmse_ite, 'pehe_nn': pehe_appr, 'auc': auc,'roc_auc':roc_auc,
-    #             'fact_auc':fact_auc,'fact_roc_auc':fact_roc_auc }
-
-
 
 
 def evaluate_cont_ate(predictions, data, i_exp, I_subset=None,
-    compute_policy_curve=False, nn_t=None, nn_c=None):
+    compute_policy_curve=False, nn_t=None, nn_c=None, cfg=None):
     if data['HAVE_TRUTH']: # ihdp
         x = data['x'][:,:,i_exp]
         t = data['t'][:,i_exp]
@@ -259,6 +182,17 @@ def evaluate_cont_ate(predictions, data, i_exp, I_subset=None,
             ycf = ycf[I_subset]
             mu0 = mu0[I_subset]
             mu1 = mu1[I_subset]
+
+        if 'drop' in cfg and cfg['drop'] > 0:
+            Drop_I = random.sample(range(0, len(x)), int(cfg['drop'] * len(x)))
+            x = x[Drop_I,]
+            t = t[Drop_I]
+            yf_p = yf_p[Drop_I]
+            ycf_p = ycf_p[Drop_I]
+            yf = yf[Drop_I]
+            ycf = ycf[Drop_I]
+            mu0 = mu0[Drop_I]
+            mu1 = mu1[Drop_I]
 
         eff = mu1-mu0
 
@@ -371,7 +305,7 @@ def evaluate_cont_ate(predictions, data, i_exp, I_subset=None,
 
 
 def evaluate_result(result, data, validation=False,
-        multiple_exps=False, binary=False):
+        multiple_exps=False, binary=False, cfg=None):
 
     predictions = result['pred']
     if validation:
@@ -405,10 +339,10 @@ def evaluate_result(result, data, validation=False,
 
             if binary:
                 eval_result = evaluate_bin_att(predictions[:,:,i_rep,i_out],
-                    data, i_exp, I_valid_rep, compute_policy_curve, nn_t=nn_t, nn_c=nn_c)
+                    data, i_exp, I_valid_rep, compute_policy_curve, nn_t=nn_t, nn_c=nn_c, cfg=cfg)
             else:
                 eval_result = evaluate_cont_ate(predictions[:,:,i_rep,i_out],
-                    data, i_exp, I_valid_rep, compute_policy_curve, nn_t=nn_t, nn_c=nn_c)
+                    data, i_exp, I_valid_rep, compute_policy_curve, nn_t=nn_t, nn_c=nn_c, cfg=cfg)
 
             eval_results_out.append(eval_result)
 
@@ -435,8 +369,7 @@ def evaluate_result(result, data, validation=False,
 
     return eval_dict
 
-def evaluate(output_dir, data_path_train, data_path_test=None, binary=False):
-
+def evaluate(output_dir, data_path_train, data_path_test=None, binary=False, cfg=None):
     print '\nEvaluating experiment %s...' % output_dir
 
     # Load results_try1 for all configurations
@@ -480,14 +413,15 @@ def evaluate(output_dir, data_path_train, data_path_test=None, binary=False):
         try:
             eval_train = evaluate_result(result['train'], data_train,
                                          validation=False, multiple_exps=multiple_exps,
-                                         binary=binary)
+                                         binary=binary,
+                                         cfg=cfg)
 
             eval_valid = evaluate_result(result['train'], data_train,
-                validation=True, multiple_exps=multiple_exps, binary=binary)
+                validation=True, multiple_exps=multiple_exps, binary=binary, cfg=cfg)
 
             if data_test is not None:
                 eval_test = evaluate_result(result['test'], data_test,
-                    validation=False, multiple_exps=multiple_exps, binary=binary)
+                    validation=False, multiple_exps=multiple_exps, binary=binary, cfg=cfg)
             else:
                 eval_test = None
 

@@ -57,7 +57,8 @@ def evaluate(config_file, overwrite=False, filters=None):
         eval_results, configs = evaluation.evaluate(output_dir,
                                 data_path_train=data_train,
                                 data_path_test=data_test,
-                                binary=binary)
+                                binary=binary,
+                                cfg=cfg)
         # Save evaluation
         pickle.dump((eval_results, configs), open(eval_path, "wb"))
     else:
@@ -65,8 +66,6 @@ def evaluate(config_file, overwrite=False, filters=None):
             print 'Loading evaluation results_try1 from %s...' % eval_path
         # Load evaluation
         eval_results, configs = pickle.load(open(eval_path, "rb"))
-    # print eval_results
-    # print configs
     data_train_find = load_data(data_train)
 
 

@@ -6,6 +6,7 @@ import random
 import datetime
 import traceback
 from subprocess import call
+from tqdm import tqdm
 
 import simi_ite.site_net as site
 from simi_ite.util import *
@@ -57,6 +58,9 @@ tf.app.flags.DEFINE_float('dim_c', 100.0, """Dimension in PDDM unit for c """)
 tf.app.flags.DEFINE_float('dim_s', 100.0, """Dimension in PDDM unit for s """)
 tf.app.flags.DEFINE_string('propensity_dir','./propensity_score/ihdp_propensity_model.sav', """Dir where the propensity model is saved""" )
 tf.app.flags.DEFINE_boolean('equal_sample', 0, """Whether to fectch equal number of samples with different labels. """)
+
+tf.app.flags.DEFINE_float('gnoise', 0.0, """Gaussian noise scale """)
+tf.app.flags.DEFINE_float('drop', 0.0, """Random Drop Rate""")
 
 if FLAGS.sparse:
     import scipy.sparse as sparse
@@ -147,6 +151,30 @@ def train(SITE, sess, train_step, D, I_valid, D_test, logfile, i_exp):
     reps = []
     reps_test = []
 
+    """make noise"""
+    if FLAGS.gnoise > 0:
+        gnoise_train = np.random.normal(scale=FLAGS.gnoise, size=D['x'].shape)
+    else:
+        gnoise_train = np.zeros_like(D['x'])
+    has_test = False
+    if not FLAGS.data_test == '': # if test set supplied
+        has_test = True
+    if has_test:
+        if FLAGS.gnoise > 0:
+            gnoise_test = np.random.normal(scale=FLAGS.gnoise, size=D_test['x'].shape)
+        else:
+            gnoise_test = np.zeros_like(D_test['x'])
+    if D["HAVE_TRUTH"]: #idhp
+        gnoise_train[:,6:] = 0.
+        if has_test:
+            gnoise_test[:,6:] = 0.
+    else: # jobs
+        jobs_cont_cov = [0,1,6,7,8,9,10,11,12,15]
+        jobs_bin_cov = [ i for i in range(gnoise_train.shape[1]) if i not in jobs_cont_cov]
+        gnoise_train[:,jobs_bin_cov] = 0.
+        if has_test:
+            gnoise_test[:,jobs_bin_cov] = 0.
+
     ''' Train for multiple iterations '''
     for i in range(FLAGS.iterations):
 
@@ -221,15 +249,15 @@ def train(SITE, sess, train_step, D, I_valid, D_test, logfile, i_exp):
         ''' Compute predictions every M iterations '''
         if (FLAGS.pred_output_delay > 0 and i % FLAGS.pred_output_delay == 0) or i==FLAGS.iterations-1:
 
-            y_pred_f = sess.run(SITE.output, feed_dict={SITE.x: D['x'], \
+            y_pred_f = sess.run(SITE.output, feed_dict={SITE.x: D['x']+gnoise_train, \
                 SITE.t: D['t'], SITE.do_in: 1.0, SITE.do_out: 1.0})
-            y_pred_cf = sess.run(SITE.output, feed_dict={SITE.x: D['x'], \
+            y_pred_cf = sess.run(SITE.output, feed_dict={SITE.x: D['x']+gnoise_train, \
                 SITE.t: 1-D['t'], SITE.do_in: 1.0, SITE.do_out: 1.0})
             preds_train.append(np.concatenate((y_pred_f, y_pred_cf),axis=1))
             if D_test is not None:
-                y_pred_f_test = sess.run(SITE.output, feed_dict={SITE.x: D_test['x'], \
+                y_pred_f_test = sess.run(SITE.output, feed_dict={SITE.x: D_test['x']+gnoise_test, \
                     SITE.t: D_test['t'], SITE.do_in: 1.0, SITE.do_out: 1.0})
-                y_pred_cf_test = sess.run(SITE.output, feed_dict={SITE.x: D_test['x'], \
+                y_pred_cf_test = sess.run(SITE.output, feed_dict={SITE.x: D_test['x']+gnoise_test, \
                     SITE.t: 1-D_test['t'], SITE.do_in: 1.0, SITE.do_out: 1.0})
                 preds_test.append(np.concatenate((y_pred_f_test, y_pred_cf_test),axis=1))
 
@@ -380,7 +408,7 @@ def run(outdir):
         n_experiments = FLAGS.repetitions
 
     ''' Run for all repeated experiments '''
-    for i_exp in range(1,n_experiments+1):
+    for i_exp in tqdm(range(1,n_experiments+1), desc="Experiments"):
 
         if FLAGS.repetitions>1:
             log(logfile, 'Training on repeated initialization %d/%d...' % (i_exp, FLAGS.repetitions))
@@ -490,7 +518,7 @@ def run(outdir):
 def main(argv=None):  # pylint: disable=unused-argument
     """ Main entry point """
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S-%f")
-    outdir = FLAGS.outdir+'/results_'+timestamp+'/'
+    outdir = FLAGS.outdir+'/results_{}_{}/'.format(timestamp, FLAGS.gnoise)
     os.mkdir(outdir)
 
 

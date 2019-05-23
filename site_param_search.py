@@ -2,6 +2,8 @@ import sys
 import os
 import numpy as np
 from subprocess import call
+from tqdm import tqdm
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # shut up tensorflow
 
 def load_config(cfg_file):
     cfg = {}
@@ -78,7 +80,7 @@ def run(cfg_file, num_runs):
         f = open(used_cfg_file, 'w')
         f.close()
 
-    for i in range(num_runs):
+    for i in tqdm(range(num_runs)):
         cfg = sample_config(configs)
         if is_used_cfg(cfg, used_cfg_file):
             print 'Configuration used, skipping'
