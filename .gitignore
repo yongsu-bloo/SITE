@@ -1,3 +1,4 @@
 results/
 data/
 logs/*
+propensity_score/*
