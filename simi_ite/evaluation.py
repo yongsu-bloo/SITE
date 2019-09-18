@@ -94,60 +94,68 @@ def pehe_nn(yf_p, ycf_p, y, x, t, nn_t=None, nn_c=None):
 
 def evaluate_bin_att(predictions, data, i_exp, I_subset=None,
                      compute_policy_curve=False, nn_t=None, nn_c=None, cfg=None):
-    # try:
-        # print data.keys()
-        x = data['x'][:, :, i_exp]
-        t = data['t'][:, i_exp]
-        e = data['e'][:, i_exp]
-        yf = data['yf'][:, i_exp]
-        yf_p = predictions[:, 0]
-        ycf_p = predictions[:, 1]
+    # jobs
+    x = data['x'][:, :, i_exp]
+    t = data['t'][:, i_exp]
+    e = data['e'][:, i_exp]
+    yf = data['yf'][:, i_exp]
+    yf_p = predictions[:, 0]
+    ycf_p = predictions[:, 1]
 
-        att = np.mean(yf[t > 0]) - np.mean(yf[(1 - t + e) > 1])
+    att = np.mean(yf[t > 0]) - np.mean(yf[(1 - t + e) > 1])
 
-        if not I_subset is None:
-            x = x[I_subset, :]
-            t = t[I_subset]
-            e = e[I_subset]
-            yf_p = yf_p[I_subset]
-            ycf_p = ycf_p[I_subset]
-            yf = yf[I_subset]
+    if not I_subset is None:
+        x = x[I_subset, :]
+        t = t[I_subset]
+        e = e[I_subset]
+        yf_p = yf_p[I_subset]
+        ycf_p = ycf_p[I_subset]
+        yf = yf[I_subset]
 
-        yf_p_b = 1.0 * (yf_p > 0.5)
-        ycf_p_b = 1.0 * (ycf_p > 0.5)
+    if 'drop' in cfg and cfg['drop'] > 0:
+        Drop_I = random.sample(range(0, len(x)), int(cfg['drop'] * len(x)))
+        x = x[Drop_I,]
+        t = t[Drop_I]
+        e = e[Drop_I]
+        yf_p = yf_p[Drop_I]
+        ycf_p = ycf_p[Drop_I]
+        yf = yf[Drop_I]
 
-        if np.any(np.isnan(yf_p)) or np.any(np.isnan(ycf_p)):
-            raise NaNException('NaN encountered')
+    yf_p_b = 1.0 * (yf_p > 0.5)
+    ycf_p_b = 1.0 * (ycf_p > 0.5)
 
-        # IMPORTANT: NOT USING BINARIZATION FOR EFFECT, ONLY FOR CLASSIFICATION!
+    if np.any(np.isnan(yf_p)) or np.any(np.isnan(ycf_p)):
+        raise NaNException('NaN encountered')
 
-        eff_pred = ycf_p - yf_p;
-        eff_pred[t > 0] = -eff_pred[t > 0];
+    # IMPORTANT: NOT USING BINARIZATION FOR EFFECT, ONLY FOR CLASSIFICATION!
 
-        ate_pred = np.mean(eff_pred[e > 0])
-        atc_pred = np.mean(eff_pred[(1 - t + e) > 1])
+    eff_pred = ycf_p - yf_p;
+    eff_pred[t > 0] = -eff_pred[t > 0];
 
-        att_pred = np.mean(eff_pred[(t + e) > 1])
-        bias_att = att_pred - att
+    ate_pred = np.mean(eff_pred[e > 0])
+    atc_pred = np.mean(eff_pred[(1 - t + e) > 1])
 
-        err_fact = np.mean(np.abs(yf_p_b - yf))
+    att_pred = np.mean(eff_pred[(t + e) > 1])
+    bias_att = att_pred - att
 
-        p1t = np.mean(yf[t > 0])
-        p1t_p = np.mean(yf_p[t > 0])
+    err_fact = np.mean(np.abs(yf_p_b - yf))
 
-        lpr = np.log(p1t / p1t_p + 0.001)
+    p1t = np.mean(yf[t > 0])
+    p1t_p = np.mean(yf_p[t > 0])
 
-        policy_value, policy_curve = \
-            policy_val(t[e > 0], yf[e > 0], eff_pred[e > 0], compute_policy_curve)
+    lpr = np.log(p1t / p1t_p + 0.001)
 
-        # pehe_appr = pehe_nn(yf_p, ycf_p, yf, x, t, nn_t, nn_c)
-        pehe_appr = np.nan
+    policy_value, policy_curve = \
+        policy_val(t[e > 0], yf[e > 0], eff_pred[e > 0], compute_policy_curve)
 
-        return {'ate_pred': ate_pred, 'att_pred': att_pred,
-                'bias_att': bias_att, 'atc_pred': atc_pred,
-                'err_fact': err_fact, 'lpr': lpr,
-                'policy_value': policy_value, 'policy_risk': 1 - policy_value,
-                'policy_curve': policy_curve, 'pehe_nn': pehe_appr}
+    # pehe_appr = pehe_nn(yf_p, ycf_p, yf, x, t, nn_t, nn_c)
+    pehe_appr = np.nan
+
+    return {'ate_pred': ate_pred, 'att_pred': att_pred,
+            'bias_att': bias_att, 'atc_pred': atc_pred,
+            'err_fact': err_fact, 'lpr': lpr,
+            'policy_value': policy_value, 'policy_risk': 1 - policy_value,
+            'policy_curve': policy_curve, 'pehe_nn': pehe_appr}
 
 
 def evaluate_cont_ate(predictions, data, i_exp, I_subset=None,
@@ -254,6 +262,16 @@ def evaluate_cont_ate(predictions, data, i_exp, I_subset=None,
             ycf = ycf[I_subset]
             mu0 = mu0[I_subset]
             mu1 = mu1[I_subset]
+        if 'drop' in cfg and cfg['drop'] > 0:
+            Drop_I = random.sample(range(0, len(x)), int(cfg['drop'] * len(x)))
+            x = x[Drop_I,]
+            t = t[Drop_I]
+            yf_p = yf_p[Drop_I]
+            ycf_p = ycf_p[Drop_I]
+            yf = yf[Drop_I]
+            ycf = ycf[Drop_I]
+            mu0 = mu0[Drop_I]
+            mu1 = mu1[Drop_I]
 
         eff = mu1 - mu0
 

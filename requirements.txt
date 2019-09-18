@@ -1,0 +1,4 @@
+# apt install python-tk
+tensorflow-gpu==1.7.0
+matplotlib
+tqdm

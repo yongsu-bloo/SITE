@@ -259,8 +259,8 @@ def plot_evaluation_cont(results, configs, output_dir, data_train_path, data_tes
         f.write(eval_str)
 
     ''' Plot option correlation '''
-    plot_option_correlation(output_dir, diff_opts, results_all, configs_all,
-        CORR_CHOICE_SET_CONT, CORR_CRITERION_CONT, filter_str)
+    # plot_option_correlation(output_dir, diff_opts, results_all, configs_all,
+    #     CORR_CHOICE_SET_CONT, CORR_CRITERION_CONT, filter_str)
 
 
 def plot_evaluation_bin(results, configs, output_dir, data_train_path, data_test_path, filters=None):
@@ -347,8 +347,8 @@ def plot_evaluation_bin(results, configs, output_dir, data_train_path, data_test
         # plt.close()
 
     ''' Plot option correlation '''
-    plot_option_correlation(output_dir, diff_opts, results_all, configs_all,
-        CORR_CHOICE_SET_BIN, CORR_CRITERION_BIN, filter_str)
+    # plot_option_correlation(output_dir, diff_opts, results_all, configs_all,
+    #     CORR_CHOICE_SET_BIN, CORR_CRITERION_BIN, filter_str)
 
 
 def plot_cfr_evaluation_bin(results, configs, output_dir):

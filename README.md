@@ -19,7 +19,7 @@ SITE preserves local similarity and balances data distributions simultaneously, 
 
 To run parameter search:
 ```
-python site_param_search <config_file> <num_runs>
+python site_param_search.py <config_file> <num_runs>
 ```
 
 To evaluate the results:
@@ -32,7 +32,7 @@ The dataset (a subset of IHDP data) is downloaded from http://www.mit.edu/~fredr
 
 To run the parameter search procedure: 
 ```
-python site_param_search configs/ihdp.txt 10
+python site_param_search.py configs/ihdp.txt 10
 ```
 
 To evaluate the results:
