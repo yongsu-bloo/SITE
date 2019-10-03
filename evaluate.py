@@ -45,8 +45,6 @@ def evaluate(config_file, overwrite=False, filters=None):
     if not os.path.isdir(output_dir):
         raise Exception('Could not find output at path: %s' % output_dir)
 
-    data_train = cfg['datadir']+'/'+cfg['dataform']
-    data_test = cfg['datadir']+'/'+cfg['data_test']
     binary = False
     if cfg['loss'] == 'log':
         binary = True
@@ -54,11 +52,21 @@ def evaluate(config_file, overwrite=False, filters=None):
     # Evaluate results_try1
     eval_path = '%s/evaluation.npz' % output_dir
     if overwrite or (not os.path.isfile(eval_path)):
-        eval_results, configs = evaluation.evaluate(output_dir,
-                                data_path_train=data_train,
-                                data_path_test=data_test,
-                                binary=binary,
-                                cfg=cfg)
+        if type(cfg['datadir']) == str:
+            data_train = cfg['datadir']+'/'+cfg['dataform']
+            data_test = cfg['datadir']+'/'+cfg['data_test']
+            eval_results, configs = evaluation.evaluate(output_dir,
+                                    data_path_train=data_train,
+                                    data_path_test=data_test,
+                                    binary=binary,
+                                    cfg=cfg)
+        else: # multiple data type
+            eval_results, configs = evaluation.evaluate_multidata(output_dir,
+                                    data_paths=cfg['datadir'],
+                                    binary=binary,
+                                    cfg=cfg)
+            data_train = cfg['datadir'][0] + cfg['dataform'] # no meaning
+            data_test = cfg['datadir'][0] + cfg['data_test'] # no meaning
         # Save evaluation
         pickle.dump((eval_results, configs), open(eval_path, "wb"))
     else:

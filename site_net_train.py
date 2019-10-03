@@ -62,6 +62,11 @@ tf.app.flags.DEFINE_boolean('equal_sample', 0, """Whether to fectch equal number
 tf.app.flags.DEFINE_float('gnoise', 0.0, """Gaussian noise scale """)
 tf.app.flags.DEFINE_float('drop', 0.0, """Random Drop Rate""")
 
+tf.app.flags.DEFINE_string('pn_type','', """Padding noise type""" )
+tf.app.flags.DEFINE_integer('pn_size', 0, """Padding noise size""")
+tf.app.flags.DEFINE_float('pn_scale', 0.0, """Padding noise scale""")
+
+
 if FLAGS.sparse:
     import scipy.sparse as sparse
 
@@ -240,7 +245,7 @@ def train(SITE, sess, train_step, D, I_valid, D_test, logfile, i_exp):
                 acc = 100*(1 - np.mean(np.abs(y_batch - y_pred)))
                 loss_str += ',\tAcc: %.2f%%' % acc
 
-            log(logfile, loss_str)
+            # log(logfile, loss_str)
 
             if np.isnan(obj_loss):
                 log(logfile, 'Experiment %d: Objective is NaN. Skipping.' % i_exp)

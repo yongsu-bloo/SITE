@@ -216,13 +216,13 @@ def plot_option_correlation(output_dir, diff_opts, results, configs,
 
 def plot_evaluation_cont(results, configs, output_dir, data_train_path, data_test_path, filters=None):
 
-    data_train = load_data(data_train_path)
-    data_test = load_data(data_test_path)
-
-    propensity = {}
-    propensity['train'] = np.mean(data_train['t'])
-    propensity['valid'] = np.mean(data_train['t'])
-    propensity['test'] = np.mean(data_test['t'])
+    # data_train = load_data(data_train_path)
+    # data_test = load_data(data_test_path)
+    #
+    # propensity = {}
+    # propensity['train'] = np.mean(data_train['t'])
+    # propensity['valid'] = np.mean(data_train['t'])
+    # propensity['test'] = np.mean(data_test['t'])
 
     ''' Select by filter '''
     filter_str = ''
@@ -236,7 +236,6 @@ def plot_evaluation_cont(results, configs, output_dir, data_train_path, data_tes
 
         results = dict([(s,dict([(k,results[s][k][I,]) for k in results[s].keys()])) for s in ['train', 'valid', 'test']])
         configs = [configs[i] for i in I]
-
 
     ''' Do parameter selection and early stopping '''
     results_all, configs_all, labels, sort_key = select_parameters(results,

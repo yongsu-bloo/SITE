@@ -416,8 +416,6 @@ def evaluate(output_dir, data_path_train, data_path_test=None, binary=False, cfg
     else:
         data_test = None
 
-
-
     # Evaluate all results_try1
     eval_results = []
     configs_out = []
@@ -437,6 +435,88 @@ def evaluate(output_dir, data_path_train, data_path_test=None, binary=False, cfg
             eval_valid = evaluate_result(result['train'], data_train,
                 validation=True, multiple_exps=multiple_exps, binary=binary, cfg=cfg)
 
+            if data_test is not None:
+                eval_test = evaluate_result(result['test'], data_test,
+                    validation=False, multiple_exps=multiple_exps, binary=binary, cfg=cfg)
+            else:
+                eval_test = None
+
+            eval_results.append({'train': eval_train, 'valid': eval_valid, 'test': eval_test})
+            configs_out.append(configs[i])
+        except NaNException as e:
+            print 'WARNING: Encountered NaN exception. Skipping.'
+            print e
+
+        i += 1
+
+    # Reformat into dict
+    eval_dict = {'train': {}, 'test': {}, 'valid': {}}
+    keys = eval_results[0]['train'].keys()
+    for k in keys:
+        v = np.array([eval_results[i]['train'][k] for i in range(len(eval_results))])
+        eval_dict['train'][k] = v
+
+        v = np.array([eval_results[i]['valid'][k] for i in range(len(eval_results))])
+        eval_dict['valid'][k] = v
+
+        if eval_test is not None and k in eval_results[0]['test']:
+            v = np.array([eval_results[i]['test'][k] for i in range(len(eval_results))])
+            eval_dict['test'][k] = v
+
+    return eval_dict, configs_out
+
+def evaluate_multidata(output_dir, data_paths, binary=False, cfg=None):
+
+    print '\nEvaluating experiment %s...' % output_dir
+
+    # Load results for all configurations
+    results = load_results(output_dir)
+
+    if len(results) == 0:
+        raise Exception('No finished results found.')
+
+    # Separate configuration files
+    configs = [r['config'] for r in results]
+
+    # Test whether multiple experiments (different data)
+    multiple_exps = (configs[0]['experiments'] > 1)
+    if Log.VERBOSE and multiple_exps:
+        print 'Multiple data (experiments) detected'
+    # Evaluate all results
+    eval_results = []
+    configs_out = []
+    i = 0
+    if Log.VERBOSE:
+        print 'Evaluating result (out of %d): ' % len(results)
+    for result in results:
+        cfg = result['config']
+        data_path_train = cfg['datadir'] + cfg['dataform']
+        data_path_test = cfg['datadir'] + cfg['data_test']
+        # Load training data
+        if Log.VERBOSE:
+            print 'Loading TRAINING data %s...' % data_path_train
+        data_train = load_data(data_path_train)
+
+        # Load test data
+        if data_path_test is not None:
+            if Log.VERBOSE:
+                print 'Loading TEST data %s...' % data_path_test
+            data_test = load_data(data_path_test)
+        else:
+            data_test = None
+        if Log.VERBOSE:
+            print 'Evaluating %d...' % (i+1)
+
+        try:
+            t1 = time.time()
+            eval_train = evaluate_result(result['train'], data_train,
+                validation=False, multiple_exps=multiple_exps, binary=binary, cfg=cfg)
+            t2 = time.time()
+            # print "eval_train: {:.3f}".format(t2-t1)
+            eval_valid = evaluate_result(result['train'], data_train,
+                validation=True, multiple_exps=multiple_exps, binary=binary, cfg=cfg)
+            t3 = time.time()
+            # print "eval_valid: {:.3f}".format(t3-t2)
             if data_test is not None:
                 eval_test = evaluate_result(result['test'], data_test,
                     validation=False, multiple_exps=multiple_exps, binary=binary, cfg=cfg)
