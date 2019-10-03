@@ -131,6 +131,19 @@ def train(SITE, sess, train_step, D, I_valid, D_test, logfile, i_exp):
     ''' Initialize TensorFlow variables '''
     sess.run(tf.global_variables_initializer())
 
+    """Save or Load"""
+    saver = tf.train.Saver(tf.contrib.slim.get_variables())
+    model_dir = FLAGS.outdir + '/models/'
+    if not os.path.exists(model_dir):
+        os.mkdir(model_dir)
+    save_model = model_dir + str(i_exp)
+    if os.path.isfile(save_model + '.index'):
+        log(logfile, "Saved model restored: " + save_model)
+        saver.restore(sess, save_model)
+        restored = True
+    else:
+        restored = False
+
     ''' Set up for storing predictions '''
     preds_train = []
     preds_test = []
@@ -181,6 +194,7 @@ def train(SITE, sess, train_step, D, I_valid, D_test, logfile, i_exp):
             gnoise_test[:,jobs_bin_cov] = 0.
 
     ''' Train for multiple iterations '''
+    best_valid_loss = float('inf')
     for i in range(FLAGS.iterations):
 
         ''' Fetch sample '''
@@ -198,12 +212,10 @@ def train(SITE, sess, train_step, D, I_valid, D_test, logfile, i_exp):
             log(logfile, 'Median: %.4g, Mean: %.4f, Max: %.4f' % (np.median(M.tolist()), np.mean(M.tolist()), np.amax(M.tolist())))
 
         ''' Do one step of gradient descent '''
-
-        if not objnan:
+        if not objnan and not restored:
 
             three_pairs_batch, _, _, _, three_pairs_simi = three_pair_extration(
                 x_batch, t_batch, y_batch, FLAGS.propensity_dir)
-
 
             sess.run(train_step, feed_dict={SITE.x: x_batch, SITE.t: t_batch, SITE.y_: y_batch,
                                             SITE.do_in: FLAGS.dropout_in, SITE.do_out: FLAGS.dropout_out,
@@ -218,39 +230,46 @@ def train(SITE, sess, train_step, D, I_valid, D_test, logfile, i_exp):
 
         ''' Compute loss every N iterations '''
         if i % FLAGS.output_delay == 0 or i==FLAGS.iterations-1:
-            obj_loss, f_error, pddm_loss_batch, mid_dist_batch = sess.run([SITE.tot_loss, SITE.pred_loss, SITE.pddm_loss, SITE.mid_distance ],
-                feed_dict=dict_factual)
+            if restored:
+                losses.append([0., 0., 0., 0., 0., 0., 0.])
+            else:
+                obj_loss, f_error, pddm_loss_batch, mid_dist_batch = sess.run([SITE.tot_loss, SITE.pred_loss, SITE.pddm_loss, SITE.mid_distance ],
+                    feed_dict=dict_factual)
 
-            rep = sess.run(SITE.h_rep_norm, feed_dict={SITE.x: D['x'], SITE.do_in: 1.0})
-            rep_norm = np.mean(np.sqrt(np.sum(np.square(rep), 1)))
-            # print rep
+                rep = sess.run(SITE.h_rep_norm, feed_dict={SITE.x: D['x'], SITE.do_in: 1.0})
+                rep_norm = np.mean(np.sqrt(np.sum(np.square(rep), 1)))
+                # print rep
 
-            cf_error = np.nan
-            if D['HAVE_TRUTH']:
-                cf_error = sess.run(SITE.pred_loss, feed_dict=dict_cfactual)
+                cf_error = np.nan
+                if D['HAVE_TRUTH']:
+                    cf_error = sess.run(SITE.pred_loss, feed_dict=dict_cfactual)
 
-            valid_obj = np.nan; valid_imb = np.nan; valid_f_error = np.nan;
-            if FLAGS.val_part > 0:
-                valid_obj, valid_f_error = sess.run([SITE.tot_loss, SITE.pred_loss], feed_dict=dict_valid)
+                valid_obj = np.nan; valid_imb = np.nan; valid_f_error = np.nan;
+                if FLAGS.val_part > 0:
+                    valid_obj, valid_f_error = sess.run([SITE.tot_loss, SITE.pred_loss], feed_dict=dict_valid)
 
-            losses.append([obj_loss, f_error, cf_error, valid_f_error, valid_obj])
+                losses.append([obj_loss, f_error, cf_error, valid_f_error, valid_obj])
 
-            loss_str = str(i) + '\tObj: %.3f,\tF: %.3f,\tCf: %.3f,\tPDDM: %.2g,\tmid_p: %.2g,\tVal: %.3f,\tValObj: %.2f' \
-                        % (obj_loss, f_error, cf_error, pddm_loss_batch, mid_dist_batch, valid_f_error, valid_obj)
+                loss_str = str(i) + '\tObj: %.3f,\tF: %.3f,\tCf: %.3f,\tPDDM: %.2g,\tmid_p: %.2g,\tVal: %.3f,\tValObj: %.2f' \
+                            % (obj_loss, f_error, cf_error, pddm_loss_batch, mid_dist_batch, valid_f_error, valid_obj)
 
-            if FLAGS.loss == 'log':
-                y_pred = sess.run(SITE.output, feed_dict={SITE.x: x_batch, \
-                    SITE.t: t_batch, SITE.do_in: 1.0, SITE.do_out: 1.0})
-                y_pred = 1.0*(y_pred > 0.5)
-                acc = 100*(1 - np.mean(np.abs(y_batch - y_pred)))
-                loss_str += ',\tAcc: %.2f%%' % acc
+                if FLAGS.loss == 'log':
+                    y_pred = sess.run(SITE.output, feed_dict={SITE.x: x_batch, \
+                        SITE.t: t_batch, SITE.do_in: 1.0, SITE.do_out: 1.0})
+                    y_pred = 1.0*(y_pred > 0.5)
+                    acc = 100*(1 - np.mean(np.abs(y_batch - y_pred)))
+                    loss_str += ',\tAcc: %.2f%%' % acc
 
-            # log(logfile, loss_str)
+                log(logfile, loss_str)
 
-            if np.isnan(obj_loss):
-                log(logfile, 'Experiment %d: Objective is NaN. Skipping.' % i_exp)
-                objnan = True
+                if np.isnan(obj_loss):
+                    log(logfile, 'Experiment %d: Objective is NaN. Skipping.' % i_exp)
+                    objnan = True
 
+                if valid_obj < best_valid_loss:
+                    saver.save(sess, save_model)
+                    best_valid_loss = valid_obj
+                    
         ''' Compute predictions every M iterations '''
         if (FLAGS.pred_output_delay > 0 and i % FLAGS.pred_output_delay == 0) or i==FLAGS.iterations-1:
 

@@ -52,8 +52,8 @@ def evaluate(config_file, overwrite=False, filters=None):
     # Evaluate results_try1
     eval_path = '%s/evaluation.npz' % output_dir
     if overwrite or (not os.path.isfile(eval_path)):
-        if type(cfg['datadir']) == str:
-            data_train = cfg['datadir']+'/'+cfg['dataform']
+        data_train = cfg['datadir']+'/'+cfg['dataform']
+        if type(cfg['datadir']) == str and type(cfg['data_test']) == str:
             data_test = cfg['datadir']+'/'+cfg['data_test']
             eval_results, configs = evaluation.evaluate(output_dir,
                                     data_path_train=data_train,
@@ -61,12 +61,12 @@ def evaluate(config_file, overwrite=False, filters=None):
                                     binary=binary,
                                     cfg=cfg)
         else: # multiple data type
+            data_test = cfg['datadir'] + cfg['data_test'][0] # no meaning
             eval_results, configs = evaluation.evaluate_multidata(output_dir,
                                     data_paths=cfg['datadir'],
                                     binary=binary,
                                     cfg=cfg)
-            data_train = cfg['datadir'][0] + cfg['dataform'] # no meaning
-            data_test = cfg['datadir'][0] + cfg['data_test'] # no meaning
+
         # Save evaluation
         pickle.dump((eval_results, configs), open(eval_path, "wb"))
     else:
