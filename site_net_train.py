@@ -231,7 +231,7 @@ def train(SITE, sess, train_step, D, I_valid, D_test, logfile, i_exp):
         ''' Compute loss every N iterations '''
         if i % FLAGS.output_delay == 0 or i==FLAGS.iterations-1:
             if restored:
-                losses.append([0., 0., 0., 0., 0., 0., 0.])
+                losses.append([0., 0., 0., 0., 0.])
             else:
                 obj_loss, f_error, pddm_loss_batch, mid_dist_batch = sess.run([SITE.tot_loss, SITE.pred_loss, SITE.pddm_loss, SITE.mid_distance ],
                     feed_dict=dict_factual)
@@ -269,7 +269,7 @@ def train(SITE, sess, train_step, D, I_valid, D_test, logfile, i_exp):
                 if valid_obj < best_valid_loss:
                     saver.save(sess, save_model)
                     best_valid_loss = valid_obj
-                    
+
         ''' Compute predictions every M iterations '''
         if (FLAGS.pred_output_delay > 0 and i % FLAGS.pred_output_delay == 0) or i==FLAGS.iterations-1:
 
