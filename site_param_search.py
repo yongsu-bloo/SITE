@@ -71,11 +71,6 @@ def run(cfg_file, num_runs):
             os.makedirs(tmp_dir)
     print("============= Results are stored in %s ===========" %tmp_dir)
 
-    ''' calculate the propensity '''
-    data_path = configs['datadir'][0] + configs['dataform'][0]
-    propensity_dir = configs['propensity_dir'][0]
-    call('python propensity_score_calculation.py %s %s' % (data_path, propensity_dir), shell=True)
-
     if not os.path.isfile(used_cfg_file):
         f = open(used_cfg_file, 'w')
         f.close()
@@ -85,8 +80,20 @@ def run(cfg_file, num_runs):
         if is_used_cfg(cfg, used_cfg_file):
             print 'Configuration used, skipping'
             continue
-
         save_used_cfg(cfg, used_cfg_file)
+
+        ''' calculate the propensity '''
+        propensity_dir = cfg['propensity_dir']
+        if "normal" in cfg['datadir'] or "ber" in cfg['datadir']:
+            listed_prop_dir = propensity_dir.split("/")
+            prefix = cfg['datadir'].split("/")[-1]
+            listed_prop_dir[-1] = prefix + listed_prop_dir[-1]
+            propensity_dir = "/".join(listed_prop_dir)
+        data_path = cfg['datadir'] + cfg['dataform']
+        
+        if not os.path.isfile(propensity_dir):
+            call('python propensity_score_calculation.py %s %s' % (data_path, propensity_dir), shell=True)
+
 
         print '------------------------------'
         print 'Run %d of %d:' % (i+1, num_runs)

@@ -101,10 +101,3 @@ def load_propensity_score(model_file_name,x):
     propensity_score = result[:,1]
     propensity_score = propensity_score.flatten()
     return propensity_score
-
-
-
-
-
-
-

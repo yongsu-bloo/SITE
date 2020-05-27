@@ -58,10 +58,11 @@ tf.app.flags.DEFINE_float('dim_c', 100.0, """Dimension in PDDM unit for c """)
 tf.app.flags.DEFINE_float('dim_s', 100.0, """Dimension in PDDM unit for s """)
 tf.app.flags.DEFINE_string('propensity_dir','./propensity_score/ihdp_propensity_model.sav', """Dir where the propensity model is saved""" )
 tf.app.flags.DEFINE_boolean('equal_sample', 0, """Whether to fectch equal number of samples with different labels. """)
-
+# gaussian additive noise
 tf.app.flags.DEFINE_float('gnoise', 0.0, """Gaussian noise scale """)
+# random drop
 tf.app.flags.DEFINE_float('drop', 0.0, """Random Drop Rate""")
-
+# padding noise
 tf.app.flags.DEFINE_string('pn_type','', """Padding noise type""" )
 tf.app.flags.DEFINE_integer('pn_size', 0, """Padding noise size""")
 tf.app.flags.DEFINE_float('pn_scale', 0.0, """Padding noise scale""")
@@ -69,6 +70,13 @@ tf.app.flags.DEFINE_float('pn_scale', 0.0, """Padding noise scale""")
 
 if FLAGS.sparse:
     import scipy.sparse as sparse
+
+PROPENSITY_DIR = FLAGS.propensity_dir
+if "normal" in FLAGS.datadir or "ber" in FLAGS.datadir:
+    listed_prop_dir = PROPENSITY_DIR.split("/")
+    prefix = FLAGS.datadir.split("/")[-1]
+    listed_prop_dir[-1] = prefix + listed_prop_dir[-1]
+    PROPENSITY_DIR = "/".join(listed_prop_dir)
 
 NUM_ITERATIONS_PER_DECAY = 100
 
@@ -106,7 +114,7 @@ def train(SITE, sess, train_step, D, I_valid, D_test, logfile, i_exp):
 
     ''' Set up loss feed_dicts'''
     three_pairs_train, _, _, _, three_pairs_simi_train = three_pair_extration(
-        D['x'][I_train, :], D['t'][I_train, :], D['yf'][I_train,:], FLAGS.propensity_dir)
+        D['x'][I_train, :], D['t'][I_train, :], D['yf'][I_train,:], PROPENSITY_DIR)
 
     dict_factual = {SITE.x: D['x'][I_train,:], SITE.t: D['t'][I_train,:], SITE.y_: D['yf'][I_train,:],
                     SITE.do_in: 1.0, SITE.do_out: 1.0, SITE.r_lambda: FLAGS.p_lambda, SITE.p_t: p_treated,
@@ -115,7 +123,7 @@ def train(SITE, sess, train_step, D, I_valid, D_test, logfile, i_exp):
 
     if FLAGS.val_part > 0:
         three_pairs_valid, _, _, _, three_pairs_simi_valid = three_pair_extration(
-            D['x'][I_valid, :],D['t'][I_valid, :], D['yf'][I_valid, :], FLAGS.propensity_dir)
+            D['x'][I_valid, :],D['t'][I_valid, :], D['yf'][I_valid, :], PROPENSITY_DIR)
 
         dict_valid = {SITE.x: D['x'][I_valid,:], SITE.t: D['t'][I_valid,:], SITE.y_: D['yf'][I_valid,:],
                       SITE.do_in: 1.0, SITE.do_out: 1.0, SITE.r_lambda: FLAGS.p_lambda, SITE.p_t: p_treated,
@@ -137,12 +145,12 @@ def train(SITE, sess, train_step, D, I_valid, D_test, logfile, i_exp):
     if not os.path.exists(model_dir):
         os.mkdir(model_dir)
     save_model = model_dir + str(i_exp)
-    if os.path.isfile(save_model + '.index'):
-        log(logfile, "Saved model restored: " + save_model)
-        saver.restore(sess, save_model)
-        restored = True
-    else:
-        restored = False
+    restored = False
+    # if os.path.isfile(save_model + '.index'):
+    #     log(logfile, "Saved model restored: " + save_model)
+    #     saver.restore(sess, save_model)
+    #     restored = True
+    
 
     ''' Set up for storing predictions '''
     preds_train = []
@@ -182,16 +190,16 @@ def train(SITE, sess, train_step, D, I_valid, D_test, logfile, i_exp):
             gnoise_test = np.random.normal(scale=FLAGS.gnoise, size=D_test['x'].shape)
         else:
             gnoise_test = np.zeros_like(D_test['x'])
-    if D["HAVE_TRUTH"]: #idhp
-        gnoise_train[:,6:] = 0.
-        if has_test:
-            gnoise_test[:,6:] = 0.
-    else: # jobs
-        jobs_cont_cov = [0,1,6,7,8,9,10,11,12,15]
-        jobs_bin_cov = [ i for i in range(gnoise_train.shape[1]) if i not in jobs_cont_cov]
-        gnoise_train[:,jobs_bin_cov] = 0.
-        if has_test:
-            gnoise_test[:,jobs_bin_cov] = 0.
+    # if D["HAVE_TRUTH"]: #ihdp
+    #     gnoise_train[:,6:] = 0.
+    #     if has_test:
+    #         gnoise_test[:,6:] = 0.
+    # else: # jobs
+    #     jobs_cont_cov = [0,1,6,7,8,9,10,11,12,15]
+    #     jobs_bin_cov = [ i for i in range(gnoise_train.shape[1]) if i not in jobs_cont_cov]
+    #     gnoise_train[:,jobs_bin_cov] = 0.
+    #     if has_test:
+    #         gnoise_test[:,jobs_bin_cov] = 0.
 
     ''' Train for multiple iterations '''
     best_valid_loss = float('inf')
@@ -215,7 +223,7 @@ def train(SITE, sess, train_step, D, I_valid, D_test, logfile, i_exp):
         if not objnan and not restored:
 
             three_pairs_batch, _, _, _, three_pairs_simi = three_pair_extration(
-                x_batch, t_batch, y_batch, FLAGS.propensity_dir)
+                x_batch, t_batch, y_batch, PROPENSITY_DIR)
 
             sess.run(train_step, feed_dict={SITE.x: x_batch, SITE.t: t_batch, SITE.y_: y_batch,
                                             SITE.do_in: FLAGS.dropout_in, SITE.do_out: FLAGS.dropout_out,
